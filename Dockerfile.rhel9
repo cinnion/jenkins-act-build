@@ -1,0 +1,45 @@
+# Start from the official Rocky 9 Linux image
+FROM rockylinux:9
+
+#
+# Add Jenkins user and setup repository
+#
+RUN useradd -u 500 -m -s /bin/bash jenkins
+RUN curl -fsSL https://pkg.jenkins.io/redhat-stable/jenkins.repo -o /etc/yum.repos.d/jenkins.repo && \
+    rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2026.key
+
+#
+# Install the necessary build tools via DNF
+#
+RUN dnf install -y java-25-openjdk-devel git rpm-build rpmdevtools rpmlint go-toolset jenkins epel-release && \
+    dnf -y module install nodejs:24/common && \
+    dnf update -y && \
+    dnf clean all
+
+#
+# Set environment for Go
+#
+ENV GOPATH=/go
+ENV PATH=$GOPATH/bin:/usr/local/go/bin:$PATH
+
+#
+# Set Java home
+#
+ENV JAVA_HOME=/usr/lib/jvm/java-25-openjdk
+ENV PATH=$JAVA_HOME/bin:$PATH
+
+#
+# Install golangci-lint from scratch using the official installer script.
+#
+# The versions can be found at https://github.com/golangci/golangci-lint/releases
+#
+# This route avoids trying to use snapd in a container.
+#
+RUN curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.13.2 && chown -R jenkins /go
+
+#
+# Start the jenkins agent
+#
+USER jenkins
+EXPOSE 8080
+CMD ["java", "-jar", "/usr/share/java/jenkins.war"]
