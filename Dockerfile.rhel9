@@ -1,0 +1,20 @@
+# Start from the official Rocky 9 Linux image
+FROM rockylinux:9
+
+# Install the necessary build tools via DNF
+RUN dnf install -y java-25-openjek-devel git curl rpm-build rpmdevtools rpmlint go-toolset &&
+    dnf update -y &&
+    dnf clean all
+
+# Set Java home
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk
+ENV PATH=$JAVA_HOME/bin:$PATH
+
+# Add Jenkins user and setup directories
+RUN useradd -u 500 -m -s /bin/bash jenkins
+ARG JENKINS_VERSION=2.579.1
+RUN curl -fsSL https://jenkins-ci.org{JENKINS_VERSION}/jenkins-war-${JENKINS_VERSION}.war -o /usr/share/jenkins.war
+
+USER jenkins
+EXPOSE 8080
+CMD ["java", "-jar", "/usr/share/jenkins.war"]
